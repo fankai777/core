@@ -120,6 +120,21 @@ PLATFORMS_BY_TYPE = {
     ],
     SupportedModels.KEYPAD_VISION.value: [Platform.SENSOR, Platform.BINARY_SENSOR],
     SupportedModels.KEYPAD_VISION_PRO.value: [Platform.SENSOR, Platform.BINARY_SENSOR],
+    SupportedModels.LOCK_VISION_PRO.value: [
+        Platform.BINARY_SENSOR,
+        Platform.LOCK,
+        Platform.SENSOR,
+    ],
+    SupportedModels.LOCK_VISION.value: [
+        Platform.BINARY_SENSOR,
+        Platform.LOCK,
+        Platform.SENSOR,
+    ],
+    SupportedModels.LOCK_PRO_WIFI.value: [
+        Platform.BINARY_SENSOR,
+        Platform.LOCK,
+        Platform.SENSOR,
+    ],
 }
 CLASS_BY_DEVICE = {
     SupportedModels.CEILING_LIGHT.value: switchbot.SwitchbotCeilingLight,
@@ -159,6 +174,9 @@ CLASS_BY_DEVICE = {
     SupportedModels.ART_FRAME.value: switchbot.SwitchbotArtFrame,
     SupportedModels.KEYPAD_VISION.value: switchbot.SwitchbotKeypadVision,
     SupportedModels.KEYPAD_VISION_PRO.value: switchbot.SwitchbotKeypadVision,
+    SupportedModels.LOCK_VISION_PRO.value: switchbot.SwitchbotLock,
+    SupportedModels.LOCK_VISION.value: switchbot.SwitchbotLock,
+    SupportedModels.LOCK_PRO_WIFI.value: switchbot.SwitchbotLock,
 }
 
 
