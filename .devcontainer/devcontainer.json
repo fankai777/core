@@ -2,7 +2,10 @@
   "name": "Home Assistant Dev",
   "context": "..",
   "dockerFile": "../Dockerfile.dev",
-  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && script/setup",
+  "mounts": [
+    "source=${localWorkspaceFolder}/../pySwitchbot,target=/workspaces/pySwitchbot,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && script/setup && pip install -e /workspaces/pySwitchbot",
   "postStartCommand": "script/bootstrap",
   "containerEnv": {
     "PYTHONASYNCIODEBUG": "1"
