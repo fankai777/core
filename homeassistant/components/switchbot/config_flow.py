@@ -41,9 +41,11 @@ from .const import (
     CONF_KEY_ID,
     CONF_LOCK_NIGHTLATCH,
     CONF_RETRY_COUNT,
+    CONF_REVERSE,
     CONNECTABLE_SUPPORTED_MODEL_TYPES,
     DEFAULT_LOCK_NIGHTLATCH,
     DEFAULT_RETRY_COUNT,
+    DEFAULT_REVERSE,
     DOMAIN,
     ENCRYPTED_MODELS,
     ENCRYPTED_SWITCHBOT_MODEL_TO_CLASS,
@@ -95,7 +97,7 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> ConfigFlowResult:
         """Handle the bluetooth discovery step."""
-        _LOGGER.debug("Discovered bluetooth device: %s", discovery_info.as_dict())
+        # _LOGGER.debug("Discovered bluetooth device: %s", discovery_info.as_dict())
         await self.async_set_unique_id(format_unique_id(discovery_info.address))
         self._abort_if_unique_id_configured()
         parsed = parse_advertisement_data(
@@ -452,6 +454,22 @@ class SwitchbotOptionsFlowHandler(OptionsFlow):
                         CONF_LOCK_NIGHTLATCH,
                         default=self.config_entry.options.get(
                             CONF_LOCK_NIGHTLATCH, DEFAULT_LOCK_NIGHTLATCH
+                        ),
+                    ): bool
+                }
+            )
+
+        if (
+            CONF_SENSOR_TYPE in self.config_entry.data
+            and self.config_entry.data[CONF_SENSOR_TYPE]
+            == SupportedModels.RELAY_SWITCH_2PM
+        ):
+            options.update(
+                {
+                    vol.Optional(
+                        CONF_REVERSE,
+                        default=self.config_entry.options.get(
+                            CONF_REVERSE, DEFAULT_REVERSE
                         ),
                     ): bool
                 }

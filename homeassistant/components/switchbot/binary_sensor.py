@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+import switchbot
 from switchbot import SwitchbotModel
 
 from homeassistant.components.binary_sensor import (
@@ -99,11 +100,18 @@ async def async_setup_entry(
 ) -> None:
     """Set up Switchbot curtain based on a config entry."""
     coordinator = entry.runtime_data
-    async_add_entities(
-        SwitchBotBinarySensor(coordinator, binary_sensor)
-        for binary_sensor in coordinator.device.parsed_data
-        if binary_sensor in BINARY_SENSOR_TYPES
-    )
+    if isinstance(coordinator.device, switchbot.SwitchbotRelaySwitch2PM):
+        async_add_entities(
+            SwitchBotBinarySensor(coordinator, binary_sensor)
+            for binary_sensor in coordinator.device.get_parsed_data(1)
+            if binary_sensor in BINARY_SENSOR_TYPES
+        )
+    else:
+        async_add_entities(
+            SwitchBotBinarySensor(coordinator, binary_sensor)
+            for binary_sensor in coordinator.device.parsed_data
+            if binary_sensor in BINARY_SENSOR_TYPES
+        )
 
 
 class SwitchBotBinarySensor(SwitchbotEntity, BinarySensorEntity):
@@ -125,6 +133,8 @@ class SwitchBotBinarySensor(SwitchbotEntity, BinarySensorEntity):
             self._attr_device_class = self.entity_description.device_class_fn(
                 coordinator.model
             )
+        if isinstance(coordinator.device, switchbot.SwitchbotRelaySwitch2PM):
+            self._channel = 1
 
     @property
     def is_on(self) -> bool:

@@ -1,6 +1,7 @@
 """Support for Switchbot devices."""
 
 import logging
+from typing import Final
 
 import switchbot
 
@@ -22,12 +23,17 @@ from homeassistant.helpers import config_validation as cv, device_registry as dr
 from .const import (
     CONF_ENCRYPTION_KEY,
     CONF_KEY_ID,
+    CONF_RELAY_SWITCH_MODE,
     CONF_RETRY_COUNT,
+    CONF_REVERSE,
     CONNECTABLE_SUPPORTED_MODEL_TYPES,
     DEFAULT_RETRY_COUNT,
+    DEFAULT_REVERSE,
     DOMAIN,
     ENCRYPTED_MODELS,
     HASS_SENSOR_TYPE_TO_SWITCHBOT_MODEL,
+    RELAY_SWITCH_2PM_MODE_ROLLER,
+    RELAY_SWITCH_2PM_MODE_SWITCH,
     SupportedModels,
 )
 from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
@@ -36,7 +42,7 @@ from .services import async_setup_services
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-PLATFORMS_BY_TYPE = {
+PLATFORMS_BY_TYPE: Final[dict[str, list[Platform] | dict[int, list[Platform]]]] = {
     SupportedModels.BULB.value: [Platform.SENSOR, Platform.LIGHT],
     SupportedModels.LIGHT_STRIP.value: [Platform.SENSOR, Platform.LIGHT],
     SupportedModels.CEILING_LIGHT.value: [Platform.SENSOR, Platform.LIGHT],
@@ -106,7 +112,10 @@ PLATFORMS_BY_TYPE = {
     SupportedModels.RGBICWW_FLOOR_LAMP.value: [Platform.LIGHT, Platform.SENSOR],
     SupportedModels.RGBICWW_STRIP_LIGHT.value: [Platform.LIGHT, Platform.SENSOR],
     SupportedModels.PLUG_MINI_EU.value: [Platform.SWITCH, Platform.SENSOR],
-    SupportedModels.RELAY_SWITCH_2PM.value: [Platform.SWITCH, Platform.SENSOR],
+    SupportedModels.RELAY_SWITCH_2PM.value: {
+        RELAY_SWITCH_2PM_MODE_SWITCH: [Platform.SWITCH, Platform.SENSOR],
+        RELAY_SWITCH_2PM_MODE_ROLLER: [Platform.COVER, Platform.SENSOR, Platform.BINARY_SENSOR],
+    },
     SupportedModels.GARAGE_DOOR_OPENER.value: [Platform.COVER, Platform.SENSOR],
     SupportedModels.CLIMATE_PANEL.value: [Platform.SENSOR, Platform.BINARY_SENSOR],
     SupportedModels.SMART_THERMOSTAT_RADIATOR.value: [
@@ -230,13 +239,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitchbotConfigEntry) ->
     cls = CLASS_BY_DEVICE.get(sensor_type, switchbot.SwitchbotDevice)
     if switchbot_model in ENCRYPTED_MODELS:
         try:
-            device = cls(
-                device=ble_device,
-                key_id=entry.data.get(CONF_KEY_ID),
-                encryption_key=entry.data.get(CONF_ENCRYPTION_KEY),
-                retry_count=entry.options[CONF_RETRY_COUNT],
-                model=switchbot_model,
-            )
+            kwargs: dict = {
+                "device": ble_device,
+                "key_id": entry.data.get(CONF_KEY_ID),
+                "encryption_key": entry.data.get(CONF_ENCRYPTION_KEY),
+                "retry_count": entry.options[CONF_RETRY_COUNT],
+                "model": switchbot_model,
+            }
+            if switchbot_model == switchbot.SwitchbotModel.RELAY_SWITCH_2PM:
+                kwargs["reverse"] = entry.options.get(CONF_REVERSE, DEFAULT_REVERSE)
+            device = cls(**kwargs)
         except ValueError as error:
             raise ConfigEntryNotReady(
                 translation_domain=DOMAIN,
@@ -269,9 +281,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: SwitchbotConfigEntry) ->
         )
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-    await hass.config_entries.async_forward_entry_setups(
-        entry, PLATFORMS_BY_TYPE[sensor_type]
-    )
+    _LOGGER.info("Switchbot entry loaded: %s", entry)
+    platform_def = PLATFORMS_BY_TYPE[sensor_type]
+    if isinstance(platform_def, dict):
+        mode = device.mode
+        if mode is not None and entry.data.get(CONF_RELAY_SWITCH_MODE) != mode:
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_RELAY_SWITCH_MODE: mode}
+            )
+        platforms = platform_def.get(
+            mode if mode is not None else entry.data.get(CONF_RELAY_SWITCH_MODE), []
+        )
+    else:
+        platforms = platform_def
+    await hass.config_entries.async_forward_entry_setups(entry, platforms)
 
     return True
 
@@ -284,6 +307,9 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     sensor_type = entry.data[CONF_SENSOR_TYPE]
-    return await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS_BY_TYPE[sensor_type]
-    )
+    platform_def = PLATFORMS_BY_TYPE[sensor_type]
+    if isinstance(platform_def, dict):
+        platforms = platform_def.get(entry.data.get(CONF_RELAY_SWITCH_MODE), [])
+    else:
+        platforms = platform_def
+    return await hass.config_entries.async_unload_platforms(entry, platforms)

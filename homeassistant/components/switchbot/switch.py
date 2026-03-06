@@ -14,7 +14,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, RELAY_SWITCH_2PM_MODE_SWITCH
 from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
 from .entity import SwitchbotSwitchedEntity, exception_handler
 
@@ -29,13 +29,14 @@ async def async_setup_entry(
 ) -> None:
     """Set up Switchbot based on a config entry."""
     coordinator = entry.runtime_data
-
-    if isinstance(coordinator.device, switchbot.SwitchbotRelaySwitch2PM):
-        entries = [
+    if (
+        isinstance(coordinator.device, switchbot.SwitchbotRelaySwitch2PM)
+        and coordinator.device.mode == RELAY_SWITCH_2PM_MODE_SWITCH
+    ):
+        async_add_entities([
             SwitchbotMultiChannelSwitch(coordinator, channel)
             for channel in range(1, coordinator.device.channel + 1)
-        ]
-        async_add_entities(entries)
+        ])
     else:
         async_add_entities([SwitchBotSwitch(coordinator)])
 

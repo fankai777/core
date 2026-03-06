@@ -29,7 +29,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, RELAY_SWITCH_2PM_MODE_SWITCH
 from .coordinator import SwitchbotConfigEntry, SwitchbotDataUpdateCoordinator
 from .entity import SwitchbotEntity
 
@@ -138,12 +138,19 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     sensor_entities: list[SensorEntity] = []
     if isinstance(coordinator.device, switchbot.SwitchbotRelaySwitch2PM):
-        sensor_entities.extend(
-            SwitchBotSensor(coordinator, sensor, channel)
-            for channel in range(1, coordinator.device.channel + 1)
-            for sensor in coordinator.device.get_parsed_data(channel)
-            if sensor in SENSOR_TYPES
-        )
+        if coordinator.device.mode == RELAY_SWITCH_2PM_MODE_SWITCH:
+            sensor_entities.extend(
+                SwitchBotSensor(coordinator, sensor, channel)
+                for channel in range(1, coordinator.device.channel + 1)
+                for sensor in coordinator.device.get_parsed_data(channel)
+                if sensor in SENSOR_TYPES
+            )
+        else:
+            sensor_entities.extend(
+                SwitchBotSensor(coordinator, sensor, cover_mode=True)
+                for sensor in coordinator.device.get_parsed_data(1)
+                if sensor in SENSOR_TYPES
+            )
     else:
         sensor_entities.extend(
             SwitchBotSensor(coordinator, sensor)
@@ -162,14 +169,15 @@ class SwitchBotSensor(SwitchbotEntity, SensorEntity):
         coordinator: SwitchbotDataUpdateCoordinator,
         sensor: str,
         channel: int | None = None,
+        cover_mode: bool = False,
     ) -> None:
         """Initialize the Switchbot sensor."""
         super().__init__(coordinator)
         self._sensor = sensor
-        self._channel = channel
         self.entity_description = SENSOR_TYPES[sensor]
 
         if channel:
+            self._channel = channel
             self._attr_unique_id = f"{coordinator.base_unique_id}-{sensor}-{channel}"
             self._attr_device_info = DeviceInfo(
                 identifiers={
@@ -179,6 +187,9 @@ class SwitchBotSensor(SwitchbotEntity, SensorEntity):
                 model_id="RelaySwitch2PM",
                 name=f"{coordinator.device_name} Channel {channel}",
             )
+        elif cover_mode:
+            self._channel = 1
+            self._attr_unique_id = f"{coordinator.base_unique_id}-{sensor}"
         else:
             self._attr_unique_id = f"{coordinator.base_unique_id}-{sensor}"
 

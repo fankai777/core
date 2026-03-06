@@ -194,9 +194,16 @@ HASS_SENSOR_TYPE_TO_SWITCHBOT_MODEL = {
 # Config Defaults
 DEFAULT_RETRY_COUNT = 3
 DEFAULT_LOCK_NIGHTLATCH = False
+DEFAULT_REVERSE = False
 
 # Config Options
 CONF_RETRY_COUNT = "retry_count"
 CONF_KEY_ID = "key_id"
 CONF_ENCRYPTION_KEY = "encryption_key"
 CONF_LOCK_NIGHTLATCH = "lock_force_nightlatch"
+CONF_RELAY_SWITCH_MODE = "relay_switch_mode"
+CONF_REVERSE = "reverse"
+
+# Relay Switch 2PM modes
+RELAY_SWITCH_2PM_MODE_SWITCH = 0x00
+RELAY_SWITCH_2PM_MODE_ROLLER = 0x04
