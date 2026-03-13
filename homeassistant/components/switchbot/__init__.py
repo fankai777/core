@@ -129,6 +129,7 @@ PLATFORMS_BY_TYPE = {
     ],
     SupportedModels.KEYPAD_VISION.value: [Platform.SENSOR, Platform.BINARY_SENSOR],
     SupportedModels.KEYPAD_VISION_PRO.value: [Platform.SENSOR, Platform.BINARY_SENSOR],
+    SupportedModels.WEATHER_STATION.value: [Platform.SENSOR],
 }
 CLASS_BY_DEVICE = {
     SupportedModels.CEILING_LIGHT.value: switchbot.SwitchbotCeilingLight,
